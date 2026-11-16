@@ -585,3 +585,12 @@ table.compact thead th { font-size: 0.66rem; }
 [id^="policy-"] .span { stroke: var(--rule-strong); stroke-width: 2; }
 [id^="policy-"] .bidpt { fill: var(--accent); }
 [id^="policy-"] .askpt { fill: var(--surface); stroke: var(--accent); stroke-width: 2; }
+.sub-h { font-size: 1.3rem; }
+.pairs { display: grid; gap: 1.1rem; }
+.pair { display: grid; gap: 0.45rem; padding-top: 0.9rem; border-top: 1px solid var(--rule); }
+.pair-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.2rem 1rem; font-size: 0.9rem; }
+.pair-head span { font-family: var(--mono); font-size: 0.72rem; color: var(--ink-3); }
+.pair.win .pair-head span { color: var(--pos); }
+.pair .fill { background: var(--accent); }
+.pair .fill.rule { background: var(--rule-strong); }
+#sweep .fill.rule { background: var(--rule-strong); }

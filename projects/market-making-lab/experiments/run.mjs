@@ -41,11 +41,20 @@ const results = strategies.map((s) => {
   };
 });
 
-// How the agent's profit changes as more of the flow is informed.
+// The same comparison in markets with more or fewer informed traders. The rule stays as written;
+// a new agent is trained for each market.
 const sweep = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6].map((informedShare) => {
-  const t = trainAgent({ params: { informedShare } });
-  const r = evaluate(t.agent.policy(), makeRng(TEST_SEED), { episodes: 2000, params: { informedShare } });
-  return { informedShare, mean: round(r.mean), sd: round(r.sd), fillsPerEpisode: round(r.fillsPerEpisode, 1) };
+  const params = { informedShare };
+  const t = trainAgent({ params });
+  const a = evaluate(t.agent.policy(), makeRng(TEST_SEED), { episodes: TEST_EPISODES, params });
+  const r = evaluate(cautiousRule(), makeRng(TEST_SEED), { episodes: TEST_EPISODES, params });
+  const flat = (v) => { const d = t.agent.describe(v).find((x) => x.inventory === 0); return { bid: d.bid, ask: d.ask }; };
+  return {
+    informedShare,
+    agent: { mean: round(a.mean), sd: round(a.sd), ratio: round(a.ratio), lossRate: round(a.lossRate, 3) },
+    rule: { mean: round(r.mean), sd: round(r.sd), ratio: round(r.ratio), lossRate: round(r.lossRate, 3) },
+    calmFlat: flat(false), volatileFlat: flat(true)
+  };
 });
 
 const out = {
@@ -61,4 +70,4 @@ for (const r of results) console.log(r.name.padEnd(40), "mean", r.mean, "sd", r.
 const q = (rows) => rows.filter((d) => Math.abs(d.inventory) <= 4).map((d) => `${d.inventory}:${d.bid}/${d.ask}`).join(" ");
 console.log("calm    ", q(out.policy.calm));
 console.log("volatile", q(out.policy.volatile));
-console.log(sweep.map((s) => `${s.informedShare}:${s.mean}`).join(" "));
+for (const s of sweep) console.log(s.informedShare, "agent", s.agent.mean, s.agent.sd, s.agent.ratio, "| rule", s.rule.mean, s.rule.sd, s.rule.ratio, "| flat quotes calm", `${s.calmFlat.bid}/${s.calmFlat.ask}`, "volatile", `${s.volatileFlat.bid}/${s.volatileFlat.ask}`);

@@ -12,7 +12,7 @@ const svg = (tag, attrs = {}, text) => {
   if (text !== undefined) el.textContent = text;
   return el;
 };
-const fmt = (x, dp = 1) => { const r = +x.toFixed(dp); return (r >= 0 ? "+" : "−") + Math.abs(r).toFixed(dp); };
+const fmt = (x, dp = 1) => { const k = 10 ** dp, r = Math.round((x + Math.sign(x) * 1e-9) * k) / k; return (r >= 0 ? "+" : "−") + Math.abs(r).toFixed(dp); };
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 /* ---------- Strategies ---------- */
@@ -256,10 +256,10 @@ function initTraining() {
       }
       const testSeed = seed + 1;
       const a = evaluate(agent.policy(), makeRng(testSeed), { episodes: 1000, params });
-      const f = evaluate(fixed(2), makeRng(testSeed), { episodes: 1000, params });
+      const f = evaluate(cautiousRule(), makeRng(testSeed), { episodes: 1000, params });
       const calm = agent.describe(false).find((d) => d.inventory === 0), vol = agent.describe(true).find((d) => d.inventory === 0);
       status.innerHTML = `<b>Done.</b> With ${Math.round(params.informedShare * 100)}% informed flow and no position, this agent quotes ${calm.bid} below and ${calm.ask} above when calm, and ${vol.bid} below and ${vol.ask} above when volatile. ` +
-        `Over 1,000 new episodes it averaged ${fmt(a.mean)} ticks (standard deviation ${a.sd.toFixed(1)}), against ${fmt(f.mean)} (${f.sd.toFixed(1)}) for a fixed 2-tick quote. ` +
+        `Over 1,000 new episodes it averaged ${fmt(a.mean)} ticks (standard deviation ${a.sd.toFixed(1)}), against ${fmt(f.mean)} (${f.sd.toFixed(1)}) for the hand-written rule on the same episodes. ` +
         `The live market above now uses this agent.`;
       learned = agent;
       if (live.key === "learned") live.policy = learned.policy();
@@ -285,7 +285,7 @@ function initResults() {
   const host = $("#histograms");
   const { lo, hi, bins } = results.histogramRange;
   const peak = Math.max(...results.results.flatMap((r) => r.histogram));
-  for (const r of results.results.filter((x) => x.key !== "fixed1")) {
+  for (const r of results.results.filter((x) => ["fixed2", "skew", "learned"].includes(x.key))) {
     const fig = document.createElement("figure");
     fig.className = "hist" + (r.key === "learned" ? " hl" : "");
     const cap = document.createElement("figcaption");
@@ -307,11 +307,14 @@ function initResults() {
     host.appendChild(fig);
   }
   const sweep = $("#sweep");
-  const top = Math.max(...results.sweep.map((s) => s.mean));
-  for (const s of results.sweep) {
+  const top = Math.max(...results.sweep.map((x) => Math.max(x.agent.mean, x.rule.mean)));
+  for (const x of results.sweep) {
+    const better = x.agent.mean > x.rule.mean + 0.005;
     const row = document.createElement("div");
-    row.className = "bar-row";
-    row.innerHTML = `<div class="cap"><span>${Math.round(s.informedShare * 100)}% of takers informed</span><b>${fmt(s.mean)}</b></div><div class="track"><div class="fill" style="width:${(s.mean / top) * 100}%"></div></div>`;
+    row.className = "pair" + (better ? " win" : "");
+    row.innerHTML = `<p class="pair-head"><b>${Math.round(x.informedShare * 100)}% informed</b><span>${better ? "Agent ahead on both measures" : "Same quotes, same result"}</span></p>` +
+      `<div class="bar-row"><div class="cap"><span>Agent</span><b>${fmt(x.agent.mean)} · ${x.agent.ratio.toFixed(2)}</b></div><div class="track"><div class="fill" style="width:${(x.agent.mean / top) * 100}%"></div></div></div>` +
+      `<div class="bar-row"><div class="cap"><span>Hand-written rule</span><b>${fmt(x.rule.mean)} · ${x.rule.ratio.toFixed(2)}</b></div><div class="track"><div class="fill rule" style="width:${(x.rule.mean / top) * 100}%"></div></div></div>`;
     sweep.appendChild(row);
   }
 }

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Market-Making Lab — Edgar Coates</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="description" content="A simulated market in which a trading agent learns how to quote prices. It runs in the browser, and you can quote against it yourself.">
+<meta name="description" content="A simulated market in which a trading agent learns how to quote prices, matches a hand-written rule, and beats it when the market changes. Runs in the browser.">
 <meta name="author" content="Edgar Coates">
 <link rel="canonical" href="https://edgarcoates.github.io/projects/market-making-lab.html">
 <meta property="og:type" content="article">
@@ -54,9 +54,9 @@
     <p class="sub">A simulated market in which a trading agent learns how to quote prices. It runs in your browser, and you can quote against it yourself.</p>
     <p class="why"><b>Why this project.</b> At Tradeweb I worked on how dealers and clients trade on an electronic venue, at Minerva I manage the risk in a portfolio, and I build AI tools. A dealer quoting a two-way price needs all three, and like poker, which I study, it is a decision made against people who may know more than you.</p>
     <div class="mini-stats">
-      <div><b>15.4</b><span>average profit per episode, trained agent (ticks)</span></div>
-      <div><b>15.2</b><span>the same for a fixed 2-tick quote</span></div>
-      <div><b>85%</b><span>less variation in the agent's results</span></div>
+      <div><b>+73%</b><span>profit over my best hand-written rule when no traders are informed</span></div>
+      <div><b>7 of 7</b><span>markets where the agent did at least as well as the rule</span></div>
+      <div><b>88%</b><span>less variation than a fixed quote</span></div>
       <div><b>24</b><span>automated tests</span></div>
     </div>
     <div class="btn-row">
@@ -201,7 +201,7 @@
       <div class="prose">
         <p><b>What it learned.</b></p>
         <p>With no position in a calm market, it quotes 2 ticks each side.</p>
-        <p>When it holds a position, it moves the quote that would close the position to 1 tick. With a larger position it also moves the other quote further away. If it is long, its next trade is more likely to be a sale.</p>
+        <p>When it holds a position, it moves the quote that would close the position to 1 tick and the other quote to 3 ticks. If it is long, its next trade is more likely to be a sale.</p>
         <p>In a volatile market with no position, it quotes 3 ticks each side. That puts it behind the dealers, so it stops trading until the market is calm again. If it is holding a position, it still quotes 1 tick on the side that closes it.</p>
         <p>Market-making theory recommends both habits: shift quotes against your inventory, and widen them when volatility rises. The agent was given neither rule.</p>
       </div>
@@ -224,14 +224,19 @@
       </div>
       <div id="histograms" class="hists"></div>
       <div class="prose">
-        <p><b>Fixed quotes carry the most risk.</b> The 2-tick quote averages 15.2 ticks an episode with a standard deviation of 89, and loses money in 36% of episodes. The 1-tick quote trades most often and earns least.</p>
-        <p><b>Seeing volatility made the biggest difference.</b> The agent that sees only its inventory averages 10.2 ticks. The agent that also sees volatility averages 15.4, the highest of the six, with a standard deviation of 13. It loses money in 9% of episodes.</p>
-        <p><b>A hand-written rule still does slightly better for the risk taken.</b> My rule that leans against inventory and steps back in volatile periods scores 1.29 on mean divided by standard deviation. The agent scores 1.18. The agent earns about 15% more on average, and its results vary about 27% more.</p>
+        <p><b>Fixed quotes carry the most risk.</b> The 2-tick quote averages 15.2 ticks an episode with a standard deviation of 89, and loses money in 36% of episodes.</p>
+        <p><b>The agent reached the same quotes as my best hand-written rule.</b> In this market, with 40% of traders informed, the two give identical results: 13.4 ticks an episode with a standard deviation of 10, and a loss in 7% of episodes. That is 88% less variation than the fixed quote.</p>
+        <p><b>An agent that cannot see volatility chooses not to trade.</b> It cannot tell when quoting is safe, so at this level of caution it stays behind the dealers.</p>
       </div>
-      <div class="funnel">
-        <p class="label">The agent's average profit per episode as more traders are informed, in ticks</p>
-        <div id="sweep" class="bars"></div>
-        <p class="note">A separate agent was trained at each level and tested on 2,000 episodes. The more traders are informed, the less of the spread the market maker keeps.</p>
+      <div class="funnel" id="changes">
+        <h3 class="sub-h">When the market changes, the agent beats the rule</h3>
+        <p class="note">I wrote the rule for a market where 40% of traders are informed. Here the rule is left as written, and a new agent is trained for each market. Each row shows average profit per episode and mean ÷ sd, over 5,000 episodes.</p>
+        <div id="sweep" class="pairs"></div>
+      </div>
+      <div class="prose">
+        <p><b>With few informed traders, the agent wins on both measures.</b> With none, it averages 44.3 ticks against the rule's 25.6, which is 73% more, and scores 2.44 against 1.95 on mean ÷ sd. With 10% informed it averages 35.2 against 22.3.</p>
+        <p><b>Why.</b> The rule always steps back when the market turns volatile. When few traders are informed, that caution costs more than it saves. The agent worked this out from its own results and kept quoting 2 ticks each side through volatile periods.</p>
+        <p><b>From 20% informed upwards the two are identical.</b> The agent arrives at the rule's quotes each time. In none of the seven markets did it do worse.</p>
       </div>
     </div>
   </div>
@@ -247,8 +252,9 @@
       <dl class="deflist">
         <div><dt>The market</dt><dd>One instrument and one-lot orders. The competing dealers never change their quotes.</dd></div>
         <div><dt>The book</dt><dd>Quotes are replaced every step, so a place in the queue does not carry over to the next step.</dd></div>
+        <div><dt>The comparison</dt><dd>The rule is one I wrote. A rule tuned by hand for each market could match the agent. The agent's advantage is that it needs no retuning.</dd></div>
         <div><dt>The agent</dt><dd>It is told whether the market is calm or volatile. A real trader would have to estimate that from recent price moves. A table works here because there are only 26 situations and 9 quotes.</dd></div>
-        <div><dt>The measure</dt><dd>The size of the inventory penalty is a number I chose. A different value gives a different balance of profit and risk.</dd></div>
+        <div><dt>The measure</dt><dd>The size of the inventory penalty is a number I chose. A smaller penalty gives an agent that earns more and takes more risk than the rule.</dd></div>
       </dl>
       <ul class="tags" aria-label="Technologies">
         <li>JavaScript</li><li>Limit order book</li><li>Market microstructure</li><li>Q-learning</li><li>Simulation</li><li>node:test</li>

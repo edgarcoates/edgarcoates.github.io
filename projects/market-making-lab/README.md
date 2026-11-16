@@ -31,18 +31,34 @@ Ticks of profit per 200-step episode, 5,000 test episodes, 40% of traders inform
 | Fixed, 2 ticks each side | 15.22 | 89.24 | 0.17 | −142.13 | 36.1% | 2.60 |
 | Rule: lean against inventory | 10.09 | 18.74 | 0.54 | −22.00 | 27.7% | 0.43 |
 | Rule: lean, and step back when volatile | 13.35 | 10.32 | 1.29 | −2.00 | 7.2% | 0.20 |
-| Agent that sees inventory only | 10.23 | 20.35 | 0.50 | −24.17 | 29.1% | 0.55 |
-| Agent that also sees volatility | 15.41 | 13.11 | 1.18 | −4.00 | 8.7% | 0.27 |
+| Agent that sees inventory only | 0.00 | 0.04 | 0.01 | 0.00 | 0.0% | 0.00 |
+| Agent that also sees volatility | 13.35 | 10.32 | 1.29 | −2.00 | 7.2% | 0.20 |
 
-The agent that sees volatility has the highest average profit. It learned to quote 2 ticks each side when calm with no position, to move the closing side to 1 tick when it holds a position, and to quote behind the dealers (in effect, stop trading) when the market is volatile and it has no position. The second hand-written rule does the same things and scores slightly better on mean ÷ sd (1.29 against 1.18), with a lower mean.
+In this market the agent that sees volatility learned the same quotes as the second hand-written rule, so their results are identical. The agent that cannot see volatility learned not to trade.
+
+### When the market changes
+
+The rule is left as written. A new agent is trained for each market.
+
+| Traders informed | Agent mean | Agent mean ÷ sd | Rule mean | Rule mean ÷ sd |
+|---:|---:|---:|---:|---:|
+| 0% | 44.34 | 2.44 | 25.62 | 1.95 |
+| 10% | 35.20 | 1.92 | 22.29 | 1.81 |
+| 20% | 19.20 | 1.66 | 19.20 | 1.66 |
+| 30% | 16.19 | 1.50 | 16.19 | 1.50 |
+| 40% | 13.35 | 1.29 | 13.35 | 1.29 |
+| 50% | 10.45 | 1.10 | 10.45 | 1.10 |
+| 60% | 7.41 | 0.84 | 7.41 | 0.84 |
+
+With few informed traders the agent keeps quoting 2 ticks each side through volatile periods, where the rule steps back, and it beats the rule on both measures. From 20% upwards it arrives at the rule's quotes. A rule retuned by hand for each market could match it; the agent needs no retuning.
 
 ## How the agent learns
 
 - **What it sees:** inventory, clipped to −6…+6, and whether the market is calm or volatile (26 situations).
 - **What it chooses:** a bid distance and an ask distance, each 1, 2 or 3 ticks from the reference price (9 quotes).
-- **Score:** the profit on each fill against the new true value, minus 0.05 × inventory². The change in value of inventory already held is left out of the score: it averages zero whatever the agent does and only adds noise. Results are always measured on full profit and loss.
+- **Score:** the profit on each fill against the new true value, minus 0.2 × inventory². The change in value of inventory already held is left out of the score: it averages zero whatever the agent does and only adds noise. Results are always measured on full profit and loss.
 - **Training:** 20,000 episodes of 200 steps. Random quoting falls from 100% to 2% of steps. The learning rate falls from 0.02.
 
 ## Limits
 
-This is a simulation. It uses no market data and the results are in ticks, not money. There is one instrument, one-lot orders, and dealers that never change their quotes. Quotes are replaced every step, so a place in the queue does not carry over. The agent is told whether the market is calm or volatile; a real trader would have to estimate that. The inventory penalty is a chosen number, and a different value gives a different balance of profit and risk.
+This is a simulation. It uses no market data and the results are in ticks, not money. There is one instrument, one-lot orders, and dealers that never change their quotes. Quotes are replaced every step, so a place in the queue does not carry over. The agent is told whether the market is calm or volatile; a real trader would have to estimate that. The inventory penalty is a chosen number. A smaller penalty gives an agent that earns more and takes more risk than the rule.

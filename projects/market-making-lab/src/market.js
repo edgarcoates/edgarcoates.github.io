@@ -24,7 +24,7 @@ export const DEFAULTS = {
   dealerOffset: 3,     // competing dealers quote this far from P
   dealerSize: 5,
   maxInventory: 8,     // the market maker stops quoting the side that would breach this
-  inventoryPenalty: 0.05 // reward penalty per unit of inventory squared, per step
+  inventoryPenalty: 0.2  // reward penalty per unit of inventory squared, per step
 };
 
 export const OFFSETS = [1, 2, 3];
