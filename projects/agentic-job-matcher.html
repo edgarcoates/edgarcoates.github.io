@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Agentic Job Matcher — Edgar Coates</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="A multi-agent system that sources graduate roles: a leader agent and three sub-agents in a self-correcting loop, with guardrails enforced in code and every decision traceable.">
+<meta name="author" content="Edgar Coates">
+<link rel="canonical" href="https://edgarcoates.github.io/projects/agentic-job-matcher.html">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Agentic Job Matcher — Edgar Coates">
+<meta property="og:description" content="A leader agent and three sub-agents in a self-correcting loop, with guardrails enforced in code and every decision traceable.">
+<meta property="og:url" content="https://edgarcoates.github.io/projects/agentic-job-matcher.html">
+<meta property="og:image" content="https://edgarcoates.github.io/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#F6F8FB" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0B1017" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<script>try{var t=localStorage.getItem("theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,300..600;1,6..72,300..500&display=swap">
+<link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+<div class="progress" aria-hidden="true"></div>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="site-head">
+  <div class="wrap">
+    <a class="brand" href="../index.html">Edgar Coates</a>
+    <nav class="nav" id="nav" aria-label="On this page">
+      <a href="#problem">Problem</a>
+      <a href="#design">Design</a>
+      <a href="#choices">Choices</a>
+      <a href="#lessons">Lessons</a>
+      <a href="#results">Results</a>
+    </nav>
+    <button class="icon-btn" id="theme-toggle" type="button" aria-label="Switch between light and dark theme">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.25" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 1.75a6.25 6.25 0 0 1 0 12.5z" fill="currentColor"/></svg>
+    </button>
+    <button class="icon-btn menu-btn" id="menu-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4.5h12M2 8h12M2 11.5h12" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="main">
+<section class="page-hero">
+  <div class="wrap">
+    <a class="crumb" href="../index.html#projects"><span aria-hidden="true">←</span> All projects</a>
+    <h1>Agentic Job Matcher</h1>
+    <p class="sub">A multi-agent system that finds real graduate roles and ranks the ones a candidate both wants and can get. I built it so that every decision in the workflow can be explained, tested and priced.</p>
+    <div class="mini-stats">
+      <div><b>16</b><span>real roles vetted in the latest live run</span></div>
+      <div><b>6</b><span>shortlisted</span></div>
+      <div><b>≈ $3.40</b><span>total cost, including web search</span></div>
+      <div><b>7</b><span>failure modes caught by evals and CI</span></div>
+    </div>
+    <div class="btn-row">
+      <a class="btn primary" href="https://github.com/edgarcoates/agentic-job-matcher" rel="noopener">Code on GitHub</a>
+      <a class="btn" href="https://github.com/edgarcoates/agentic-job-matcher/blob/main/DESIGN_NOTES.md" rel="noopener">Design notes</a>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="problem">
+  <div class="wrap">
+    <div class="section-head"><h2>The problem</h2></div>
+    <div class="section-body">
+      <div class="prose">
+        <p class="lede">I first ran my graduate search by talking to an AI assistant. It worked, but I couldn't repeat it and I couldn't audit it.</p>
+        <p>Each session started from scratch, judged roles a little differently, and left no record of why one posting was kept and another dropped. So I turned the process into an explicit graph: a leader agent and three sub-agents for research, role verification and alignment, with a feedback loop, typed hand-offs between agents, and an evaluation suite.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="design">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>The design</h2>
+      <p>A leader agent, three sub-agents and a loop with an explicit stop condition.</p>
+    </div>
+    <div class="section-body">
+      <div class="flow-panel">
+        <div class="flow-bar">
+          <span class="label">Follow</span>
+          <button class="btn" type="button" data-play="pass">A role that passes</button>
+          <button class="btn" type="button" data-play="fail">A role that code rejects</button>
+          <button class="btn" type="button" id="flow-reset">Reset</button>
+        </div>
+        <p class="flow-caption" id="flow-caption" aria-live="polite">Choose a role to follow it through the graph, one step at a time.</p>
+        <div class="flow" id="flow">
+          <div class="node" data-node="plan"><span class="who">Leader agent</span><b>Plan the run</b><span>Pick 4 of 11 career lanes: want against get, least recently searched first.</span></div>
+          <div class="link"></div>
+          <div class="lanes">
+            <div class="node" data-node="lanes"><span class="who">Research</span><b>Lane 1</b></div>
+            <div class="node" data-node="lanes"><span class="who">Research</span><b>Lane 2</b></div>
+            <div class="node" data-node="lanes"><span class="who">Research</span><b>Lane 3</b></div>
+            <div class="node" data-node="lanes"><span class="who">Research</span><b>Lane 4</b></div>
+          </div>
+          <div class="link"></div>
+          <div class="node code" data-node="gather"><span class="who">Code</span><b>Gather and queue</b><span>Remove duplicates from this run and earlier runs. Interleave lanes. Hand over the next candidate.</span></div>
+          <div class="link"></div>
+          <div class="fork">
+            <div class="node code" data-node="code"><span class="who">Verification · code</span><b>Hard eligibility</b><span>Open, recent, role type, start date, graduation year, location, link.</span></div>
+            <div class="node code" data-node="reject"><span class="who">Code · on fail</span><b>Reject</b><span>No model call. Back to the queue.</span></div>
+          </div>
+          <div class="link"></div>
+          <div class="node" data-node="llm"><span class="who">Verification agent</span><b>Is it a real entry-level vacancy?</b><span>Fails only on evidence of a problem.</span></div>
+          <div class="link"></div>
+          <div class="node" data-node="align"><span class="who">Alignment agent</span><b>Score want and get</b><span>Six-factor rubric with evidence; CV match, crowding and edges. Totals computed in code.</span></div>
+          <div class="link"></div>
+          <div class="node" data-node="review"><span class="who">Leader agent</span><b>Review and give feedback</b><span>Accept or reject. Feedback steers the next research round.</span></div>
+          <div class="link long"><span>↺ keep looking: back to the queue until a full-time strong match is accepted or the budget runs out</span></div>
+          <div class="node code" data-node="final"><span class="who">Code</span><b>Finalise</b><span>Full-time first, then strong, then rank. Write the report and the trace.</span></div>
+        </div>
+        <div class="legend"><span><i></i>Model judgement</span><span><i class="c"></i>Deterministic code</span></div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <caption class="label">Who does what, and on which class of model</caption>
+          <thead><tr><th scope="col">Agent</th><th scope="col">Model tier</th><th scope="col">Why</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Leader</th><td>Largest</td><td class="wrapok">Few calls, highest-stakes judgement. It only sees roles that could be accepted.</td></tr>
+            <tr><th scope="row">Research</th><td>Mid</td><td class="wrapok">Web search and reading postings, once per lane.</td></tr>
+            <tr><th scope="row">Alignment</th><td>Mid</td><td class="wrapok">Rubric scoring needs judgement and cited evidence.</td></tr>
+            <tr><th scope="row">Verification</th><td>Smallest</td><td class="wrapok">High-volume checklist work, after code has removed the obvious failures.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="choices">
+  <div class="wrap">
+    <div class="section-head"><h2>Engineering choices</h2></div>
+    <div class="section-body">
+      <div class="choices">
+        <div><h3>A graph of narrow agents</h3><p>Each agent has one narrow job, one output schema and its own model, so each can be tested, priced and debugged alone. Routing is ordinary Python over typed state.</p></div>
+        <div><h3>Guardrails can veto but never force</h3><p>Three gates (verified, wanted, attainable) are computed in code. The leader can reject a role that passes every gate. It cannot accept one that fails.</p></div>
+        <div><h3>Cheap checks before expensive ones</h3><p>Code rejects ineligible roles before any model sees them. Research returns a shortlist per round, and each fetched page is capped in size.</p></div>
+        <div><h3>Parallel search, one lane each</h3><p>A single generic search found zero to three roles a run. A focused search per lane finds more, and running them in parallel keeps the wall-clock time of one.</p></div>
+        <div><h3>Preferences stored as numbers</h3><p>Rubric weights, tier thresholds, bonuses and penalties live in config and are applied in code. The model judges each item with evidence; code does the arithmetic and the report shows every adjustment.</p></div>
+        <div><h3>Every decision and cost is traced</h3><p>Each run writes a report with the reasons for every decision, and a line-by-line trace of every model call with tokens, searches, cost and latency.</p></div>
+        <div><h3>Runs can resume</h3><p>State is checkpointed after every step. If a run stops, it continues from the last completed step, so paid-for work is never repeated.</p></div>
+        <div><h3>Evals check which agent caught it</h3><p>Seven designed postings each test one branch. The eval checks that each is caught by the agent built to catch it, and that the right posting wins. 42 offline tests cover rules, scoring and routing at no cost.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="lessons">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>What real runs taught</h2>
+      <p>Four of the failures that changed the design.</p>
+    </div>
+    <div class="section-body">
+      <div class="lessons">
+        <article class="lesson">
+          <h3>A rule that matters belongs in code, not just in the prompt.</h3>
+          <p><b>What happened:</b> the first live run proposed the same posting three times. The prompt told the research agent not to repeat roles, but the employer was worded differently each time, so nothing stopped it.</p>
+          <p><b>The fix:</b> deduplication in code, on a normalised title and link, with a unit test.</p>
+        </article>
+        <article class="lesson">
+          <h3>Put every agent on the same clock.</h3>
+          <p><b>What happened:</b> the eval pinned "today" to a fixed date and the code checks used it. The leader's prompt never stated the date, so it used the real one, decided verification had the wrong date, and rejected a role that had passed every gate.</p>
+          <p><b>The fix:</b> one shared date, stated in every agent's prompt. The eval caught it because it asserts the final pick, not just the gates.</p>
+        </article>
+        <article class="lesson">
+          <h3>Calibrate thresholds on real data, not the test set.</h3>
+          <p><b>What happened:</b> across three live runs, nine real roles were scored and none cleared the 22-out-of-30 bar, while the practice postings cleared it easily. Real postings rarely describe decision rights or ownership, and the agent scores silence low.</p>
+          <p><b>The fix:</b> a second "worth applying" tier at 19, recency as a ranking bonus instead of a hard cut, and a focused search per lane.</p>
+        </article>
+        <article class="lesson">
+          <h3>Make tool failures visible before scaling up.</h3>
+          <p><b>What happened:</b> a large run across eleven lanes found nothing. It looked like an empty market. The per-lane summaries showed the search tool itself was erroring and timing out.</p>
+          <p><b>The fix:</b> a simpler search tool, at most three lanes at a time, tool error codes on the console, and a one-lane test run before any big one.</p>
+        </article>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="results">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>Results</h2>
+      <p>The latest live run: four lanes searched in parallel, one search round.</p>
+    </div>
+    <div class="section-body">
+      <div class="funnel">
+        <div class="bar-row"><div class="cap"><span>Real roles found</span><b>20</b></div><div class="track"><div class="fill" style="width:100%"></div></div></div>
+        <div class="bar-row"><div class="cap"><span>Reviewed</span><b>16</b></div><div class="track"><div class="fill" style="width:80%"></div></div></div>
+        <div class="bar-row"><div class="cap"><span>Shortlisted for application</span><b>6</b></div><div class="track"><div class="fill" style="width:30%"></div></div></div>
+        <p class="note">Of the 16 reviewed, 8 were rejected in code (experience, location, graduation year or role type) at no model cost. The whole run cost about $3.40, including web-search fees.</p>
+      </div>
+      <div class="prose">
+        <p>On the practice set, all seven designed postings were caught by the agent built to catch them, and the designed match was picked as a strong match. Across development, the evaluation suite and CI caught and fixed seven failure modes.</p>
+        <p>Scores still vary a little between runs: the same posting scored between 22 and 25 out of 30. Two independent gates keep the final decision stable, and a labelled set of real postings to measure agreement is the next thing I would build.</p>
+      </div>
+      <ul class="tags" aria-label="Technologies">
+        <li>Python</li><li>LangGraph</li><li>Claude API</li><li>Claude Code</li><li>Pydantic</li><li>pytest</li><li>Multi-agent orchestration</li><li>Evals</li><li>CI</li>
+      </ul>
+      <div class="btn-row">
+        <a class="btn primary" href="https://github.com/edgarcoates/agentic-job-matcher" rel="noopener">Repository</a>
+        <a class="btn" href="https://github.com/edgarcoates/agentic-job-matcher/blob/main/README.md" rel="noopener">README</a>
+        <a class="btn" href="https://github.com/edgarcoates/agentic-job-matcher/blob/main/DESIGN_NOTES.md" rel="noopener">Design notes</a>
+        <a class="btn" href="../index.html#contact">Get in touch</a>
+      </div>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer class="site-foot">
+  <div class="wrap"><span>© 2026 Edgar Coates</span><a href="../index.html">Back to the main page</a></div>
+</footer>
+
+<script src="../assets/js/main.js" defer></script>
+</body>
+</html>
