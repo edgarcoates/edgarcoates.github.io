@@ -4,7 +4,8 @@
 //   1. Everyone sees the reference price P: the true value V from the previous step, rounded to a tick.
 //   2. Competing dealers quote P - dealerOffset and P + dealerOffset. The market maker then posts
 //      one bid and one ask of size 1 at the offsets it chooses (so it queues behind dealers on a tie).
-//   3. The true value moves: V += sigma * N(0, 1).
+//   3. The true value moves: V += sigma * N(0, 1). The market is either calm or volatile, and
+//      sigma is larger when it is volatile. The state persists and switches at random.
 //   4. Takers arrive (Poisson). An informed taker knows the new V and trades only when a quote is
 //      mispriced against it. An uninformed taker picks a side at random and pays up to a random
 //      distance from P, so tighter quotes are hit more often.
@@ -14,7 +15,9 @@ import { OrderBook } from "./book.js";
 
 export const DEFAULTS = {
   steps: 200,          // steps per episode
-  sigma: 1.5,          // standard deviation of the value change per step, in ticks
+  sigma: 1.0,          // standard deviation of the value change per step when calm, in ticks
+  sigmaVolatile: 2.4,  // the same when volatile
+  switchProb: 0.04,    // chance per step that the market switches between calm and volatile
   arrivals: 1.0,       // average takers per step
   informedShare: 0.4,  // fraction of takers who know the new value
   reach: 1.0,          // average distance (ticks) an uninformed taker will pay away from P
@@ -42,6 +45,7 @@ export class Market {
     this.inventory = 0;
     this.cash = 0;
     this.pnl = 0;
+    this.volatile = false;
     this.book.clear();
     return this.inventory;
   }
@@ -69,7 +73,8 @@ export class Market {
     }
     const depth = record ? { bids: book.depth("buy", "mm"), asks: book.depth("sell", "mm") } : null;
 
-    const newValue = this.value + p.sigma * rng.normal();
+    const wasVolatile = this.volatile;
+    const newValue = this.value + (wasVolatile ? p.sigmaVolatile : p.sigma) * rng.normal();
 
     const trades = [];
     let edge = 0;
@@ -98,12 +103,13 @@ export class Market {
 
     this.value = newValue;
     this.t += 1;
+    if (rng.uniform() < p.switchProb) this.volatile = !this.volatile;
     const pnl = this.cash + this.inventory * this.value;
     // Learning signal: the edge on each fill against the new value, minus an inventory penalty.
     // It leaves out the revaluation of inventory already held, which averages zero whatever the
     // agent does and only adds noise. Results are always measured on full profit and loss.
     const reward = edge - p.inventoryPenalty * this.inventory * this.inventory;
     this.pnl = pnl;
-    return { reward, inventory: this.inventory, pnl, done: this.done, ref, quotes, depth, trades, value: newValue };
+    return { reward, inventory: this.inventory, volatile: this.volatile, wasVolatile, pnl, done: this.done, ref, quotes, depth, trades, value: newValue };
   }
 }

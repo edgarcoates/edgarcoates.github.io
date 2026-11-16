@@ -559,3 +559,29 @@ tr.hl th, tr.hl td { background: var(--accent-wash); }
 .lcell i.mine { min-width: 2.7rem; }
 table.compact th, table.compact td { padding: 0.65rem 0.7rem; font-size: 0.88rem; }
 table.compact thead th { font-size: 0.66rem; }
+.why { margin-top: 1.4rem; padding: 0.9rem 1.1rem; border-left: 3px solid var(--accent); background: var(--surface); max-width: 62ch; color: var(--ink-2); font-size: 0.98rem; }
+.why b { color: var(--ink); }
+.manual { display: flex; flex-wrap: wrap; gap: 0.7rem 1.6rem; align-items: center; padding: 0.8rem 1rem; border-bottom: 1px solid var(--rule); background: var(--accent-wash); }
+.manual > div { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
+.manual .label { margin-right: 0.3rem; }
+.manual .chip { min-width: 2.4rem; background: var(--surface); }
+.manual .chip[aria-pressed="true"] { background: var(--accent); }
+.manual .note { flex-basis: 100%; }
+.badge { display: inline-block; font-family: var(--mono); font-size: 0.74rem; padding: 0.15rem 0.5rem; border: 1px solid var(--rule-strong); border-radius: 2px; color: var(--ink-2); }
+.badge.hot { background: var(--neg); border-color: var(--neg); color: var(--surface); }
+#live-chart { height: 10rem; }
+.chart .line.faint { stroke: var(--ink-3); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.chart .vol { fill: var(--neg); opacity: 0.12; }
+.legend-row { display: flex; flex-wrap: wrap; gap: 0.3rem 1.2rem; font-size: 0.82rem; color: var(--ink-2); }
+.legend-row > span { display: inline-flex; align-items: center; gap: 0.4rem; }
+.k { display: inline-block; width: 1.2rem; height: 0; border-top: 2px solid var(--accent); }
+.k.faint { border-top: 2px dashed var(--ink-3); }
+.k.vol { height: 0.7rem; border: 0; background: var(--neg); opacity: 0.25; }
+.lab-grid.single { grid-template-columns: minmax(0, 1fr); }
+.lab-grid.half { grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--rule); }
+.lab-grid.half svg { max-width: 20rem; }
+@media (max-width: 760px) { .lab-grid.half { grid-template-columns: minmax(0, 1fr); } }
+.note.pad { padding: 0.8rem 1rem; border-top: 1px solid var(--rule); }
+[id^="policy-"] .span { stroke: var(--rule-strong); stroke-width: 2; }
+[id^="policy-"] .bidpt { fill: var(--accent); }
+[id^="policy-"] .askpt { fill: var(--surface); stroke: var(--accent); stroke-width: 2; }

@@ -309,18 +309,18 @@
       <article class="project" data-lens="m a i">
         <p class="label">Market microstructure · Reinforcement learning</p>
         <h3><a href="projects/market-making-lab.html">Market-Making Lab</a></h3>
-        <p>A limit order book with price-time priority, a simulated market of informed and uninformed traders, and a market maker that learns how to quote from reward alone. It learned to lean its quotes against its own inventory, and cut the variation in its results by about 80% against a fixed quote. The market runs live in the browser.</p>
+        <p>A simulated market in which a trading agent learns how to quote prices. It runs on a limit order book with informed and uninformed traders and calm and volatile periods. The agent learned to shift its quotes against its own position and to step back when the market turns volatile. It matched the average profit of a fixed quote with 85% less variation. You can watch it trade or quote against it in the browser.</p>
         <div class="mini-stats">
-          <div><b>1.13</b><span>profit per unit of risk, trained agent</span></div>
-          <div><b>0.34</b><span>the same, fixed 2-tick quote</span></div>
-          <div><b>5,000</b><span>test episodes per strategy</span></div>
-          <div><b>20</b><span>automated tests</span></div>
+          <div><b>15.4</b><span>average profit per episode, trained agent (ticks)</span></div>
+          <div><b>15.2</b><span>the same for a fixed 2-tick quote</span></div>
+          <div><b>85%</b><span>less variation in results</span></div>
+          <div><b>24</b><span>automated tests</span></div>
         </div>
         <ul class="tags" aria-label="Technologies">
           <li>JavaScript</li><li>Limit order book</li><li>Market microstructure</li><li>Q-learning</li><li>Simulation</li>
         </ul>
         <div class="btn-row">
-          <a class="btn primary" href="projects/market-making-lab.html">Watch it trade</a>
+          <a class="btn primary" href="projects/market-making-lab.html">See the live market</a>
           <a class="btn" href="https://github.com/edgarcoates/edgarcoates.github.io/tree/main/projects/market-making-lab" rel="noopener">Code on GitHub</a>
         </div>
       </article>

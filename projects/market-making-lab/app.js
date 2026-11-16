@@ -1,7 +1,7 @@
 // Page code for the Market-Making Lab. The market, the agents and the numbers all come from src/.
 import { makeRng } from "./src/rng.js";
 import { Market, ACTIONS, DEFAULTS } from "./src/market.js";
-import { fixed, skewRule, QAgent, train, evaluate } from "./src/agents.js";
+import { fixed, cautiousRule, indexOf, QAgent, train, evaluate } from "./src/agents.js";
 import results from "./results.js";
 
 const $ = (s, el = document) => el.querySelector(s);
@@ -15,25 +15,35 @@ const svg = (tag, attrs = {}, text) => {
 const fmt = (x, dp = 1) => { const r = +x.toFixed(dp); return (r >= 0 ? "+" : "−") + Math.abs(r).toFixed(dp); };
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-/* ---------- Policies ---------- */
+/* ---------- Strategies ---------- */
 let learned = new QAgent({ table: results.qtable });
+const manual = { bid: 2, ask: 2 };
+const NAMES = { learned: "Trained agent", cautious: "Hand-written rule", fixed2: "Fixed 2 ticks", manual: "You" };
 const policies = {
   learned: () => learned.policy(),
-  skew: () => skewRule(2),
+  cautious: () => cautiousRule(),
   fixed2: () => fixed(2),
-  fixed1: () => fixed(1)
+  manual: () => () => indexOf(manual.bid, manual.ask)
 };
 
 /* ---------- Live market ---------- */
-const live = { market: null, policy: null, key: "learned", timer: null, playing: false, history: [], fills: 0, episode: 0, speed: 420 };
+// Two copies of the market run on the same seed, so the chosen strategy and a comparison
+// strategy face the same prices and the same arriving traders.
+const live = { main: null, other: null, key: "learned", otherKey: "fixed2", policy: null, otherPolicy: null, timer: null, playing: false, history: [], fills: 0, episode: 0, speed: 420 };
 
 function resetLive() {
-  live.market = new Market(makeRng((Date.now() + live.episode * 7919) >>> 0));
+  const seed = (Date.now() + live.episode * 7919) >>> 0;
+  live.main = new Market(makeRng(seed));
+  live.other = new Market(makeRng(seed));
+  live.otherKey = live.key === "learned" ? "fixed2" : "learned";
   live.policy = policies[live.key]();
-  live.history = [{ pnl: 0, inv: 0 }];
+  live.otherPolicy = policies[live.otherKey]();
+  live.history = [{ main: 0, other: 0, volatile: false }];
   live.fills = 0;
   live.episode += 1;
   $("#tape").textContent = "";
+  $("#k-main").textContent = NAMES[live.key];
+  $("#k-other").textContent = NAMES[live.otherKey];
 }
 
 function describeTrade(t, value) {
@@ -43,7 +53,7 @@ function describeTrade(t, value) {
   const at = (mine ? "your " : "a dealer's ") + (t.takerSide === "buy" ? "ask" : "bid") + " at " + t.price;
   let edge = null;
   if (mine) edge = t.takerSide === "buy" ? t.price - value : value - t.price;
-  return { text: `${who} ${verb} hit ${at}`, edge, mine, informed: t.informed };
+  return { text: `${who} ${verb} traded on ${at}`, edge, mine };
 }
 
 function renderLadder(out) {
@@ -80,24 +90,35 @@ function renderLadder(out) {
 function renderLiveChart() {
   const el = $("#live-chart");
   el.textContent = "";
-  const W = 600, H = 150, pad = 6;
-  const pts = live.history;
-  const n = DEFAULTS.steps;
-  let lo = Math.min(0, ...pts.map((p) => p.pnl)), hi = Math.max(0, ...pts.map((p) => p.pnl));
+  const W = 600, H = 170, pad = 6;
+  const pts = live.history, n = DEFAULTS.steps;
+  let lo = Math.min(0, ...pts.map((p) => Math.min(p.main, p.other))), hi = Math.max(0, ...pts.map((p) => Math.max(p.main, p.other)));
   if (hi - lo < 20) { hi += 10; lo -= 10; }
   const x = (i) => pad + (i / n) * (W - 2 * pad);
   const y = (v) => pad + (1 - (v - lo) / (hi - lo)) * (H - 2 * pad);
-  el.appendChild(svg("line", { x1: pad, x2: W - pad, y1: y(0), y2: y(0), class: "axis" }));
-  el.appendChild(svg("polyline", { class: "line", points: pts.map((p, i) => `${x(i).toFixed(1)},${y(p.pnl).toFixed(1)}`).join(" ") }));
-  const lastPt = pts[pts.length - 1];
-  el.appendChild(svg("circle", { cx: x(pts.length - 1), cy: y(lastPt.pnl), r: 3.5, class: "dot" }));
+  // Shade the steps when the market was volatile.
+  let start = null;
+  for (let i = 1; i <= pts.length; i++) {
+    const v = i < pts.length && pts[i].volatile;
+    if (v && start === null) start = i - 1;
+    if (!v && start !== null) { el.appendChild(svg("rect", { x: x(start), y: 0, width: x(i - 1) - x(start), height: H, class: "vol" })); start = null; }
+  }
+  el.appendChild(svg("line", { x1: pad, x2: W - pad, y1: y(0), y2: y(0), class: "axis strong" }));
+  const line = (key, cls) => el.appendChild(svg("polyline", { class: cls, points: pts.map((p, i) => `${x(i).toFixed(1)},${y(p[key]).toFixed(1)}`).join(" ") }));
+  line("other", "line faint");
+  line("main", "line");
+  const last = pts[pts.length - 1];
+  el.appendChild(svg("circle", { cx: x(pts.length - 1), cy: y(last.main), r: 3.5, class: "dot" }));
+  $("#v-main").textContent = fmt(last.main);
+  $("#v-other").textContent = fmt(last.other);
 }
 
 function tick() {
-  if (live.market.done) resetLive();
-  const m = live.market;
-  const out = m.step(ACTIONS[live.policy(m.inventory)], true);
-  live.history.push({ pnl: out.pnl, inv: out.inventory });
+  if (live.main.done) resetLive();
+  const m = live.main, o = live.other;
+  const out = m.step(ACTIONS[live.policy(m.inventory, m.volatile)], true);
+  const outOther = o.step(ACTIONS[live.otherPolicy(o.inventory, o.volatile)]);
+  live.history.push({ main: out.pnl, other: outOther.pnl, volatile: out.wasVolatile });
   renderLadder(out);
   const tape = $("#tape");
   for (const t of out.trades) {
@@ -105,7 +126,7 @@ function tick() {
     if (d.mine) live.fills += 1;
     const li = document.createElement("li");
     li.className = d.mine ? "mine" : "";
-    li.innerHTML = `<span>${d.text}</span>` + (d.edge === null ? "" : `<b class="${d.edge >= 0 ? "pos" : "neg"} num">${fmt(d.edge)}</b>`);
+    li.innerHTML = `<span>${d.text}</span>` + (d.edge === null ? "" : `<b class="${+d.edge.toFixed(1) >= 0 ? "pos" : "neg"} num">${fmt(d.edge)}</b>`);
     tape.prepend(li);
   }
   while (tape.children.length > 5) tape.lastChild.remove();
@@ -116,7 +137,9 @@ function tick() {
   pnlEl.className = "num " + (out.pnl >= 0 ? "pos" : "neg");
   $("#s-fills").textContent = live.fills;
   $("#s-quote").textContent = (out.quotes.bid === null ? "none" : out.quotes.bid) + " / " + (out.quotes.ask === null ? "none" : out.quotes.ask);
-  $("#s-value").textContent = out.value.toFixed(2);
+  const regime = $("#s-regime");
+  regime.textContent = out.volatile ? "Volatile" : "Calm";
+  regime.className = out.volatile ? "badge hot" : "badge";
   renderLiveChart();
 }
 
@@ -135,8 +158,18 @@ function initLive() {
   $("#play").addEventListener("click", () => setPlaying(!live.playing));
   $("#step").addEventListener("click", () => { setPlaying(false); tick(); });
   $("#restart").addEventListener("click", () => { resetLive(); tick(); });
-  $("#strategy").addEventListener("change", (e) => { live.key = e.target.value; resetLive(); tick(); });
+  $("#strategy").addEventListener("change", (e) => {
+    live.key = e.target.value;
+    $("#manual").hidden = live.key !== "manual";
+    if (live.key === "manual") { live.speed = 900; $("#speed").value = "900"; if (live.playing) setPlaying(true); }
+    resetLive();
+    tick();
+  });
   $("#speed").addEventListener("change", (e) => { live.speed = +e.target.value; if (live.playing) setPlaying(true); });
+  document.querySelectorAll("#manual button").forEach((b) => b.addEventListener("click", () => {
+    manual[b.dataset.side] = +b.dataset.off;
+    document.querySelectorAll(`#manual button[data-side="${b.dataset.side}"]`).forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+  }));
   if (!reduceMotion && "IntersectionObserver" in window) {
     let started = false;
     new IntersectionObserver((entries) => {
@@ -147,11 +180,11 @@ function initLive() {
   }
 }
 
-/* ---------- Learned policy chart ---------- */
-function renderPolicy(rows, visits) {
-  const el = $("#policy-chart");
+/* ---------- Learned quotes chart ---------- */
+function renderPolicy(el, rows) {
   el.textContent = "";
-  const rowH = 22, W = 340, left = 62, right = 12, top = 26;
+  rows = rows.filter((r) => Math.abs(r.inventory) <= 4);
+  const rowH = 24, W = 300, left = 44, right = 12, top = 26;
   const H = top + rows.length * rowH + 6;
   el.setAttribute("viewBox", `0 0 ${W} ${H}`);
   const x = (off) => left + ((off + 3) / 6) * (W - left - right);
@@ -161,15 +194,13 @@ function renderPolicy(rows, visits) {
   }
   rows.slice().reverse().forEach((r, i) => {
     const y = top + i * rowH + rowH / 2;
-    const seen = !visits || visits[r.inventory + 6] > 0;
-    const g = svg("g", { class: seen ? "" : "unseen" });
-    g.appendChild(svg("text", { x: left - 12, y: y + 4, class: "tick", "text-anchor": "end" }, (r.inventory > 0 ? "+" : r.inventory < 0 ? "−" : "") + Math.abs(r.inventory)));
-    g.appendChild(svg("line", { x1: x(-r.bid), x2: x(r.ask), y1: y, y2: y, class: "span" }));
-    g.appendChild(svg("circle", { cx: x(-r.bid), cy: y, r: 5, class: "bidpt" }));
-    g.appendChild(svg("circle", { cx: x(r.ask), cy: y, r: 5, class: "askpt" }));
-    el.appendChild(g);
+    el.appendChild(svg("text", { x: left - 14, y: y + 4, class: "tick", "text-anchor": "end" }, (r.inventory > 0 ? "+" : r.inventory < 0 ? "−" : "") + Math.abs(r.inventory)));
+    el.appendChild(svg("line", { x1: x(-r.bid), x2: x(r.ask), y1: y, y2: y, class: "span" }));
+    el.appendChild(svg("circle", { cx: x(-r.bid), cy: y, r: 5, class: "bidpt" }));
+    el.appendChild(svg("circle", { cx: x(r.ask), cy: y, r: 5, class: "askpt" }));
   });
 }
+const renderPolicies = (calm, volatile) => { renderPolicy($("#policy-calm"), calm); renderPolicy($("#policy-volatile"), volatile); };
 
 /* ---------- Learning curve ---------- */
 function renderCurve(points, total) {
@@ -177,7 +208,7 @@ function renderCurve(points, total) {
   el.textContent = "";
   const W = 600, H = 190, l = 40, r = 10, t = 10, b = 24;
   const ys = points.map((p) => p.meanPnl);
-  const lo = Math.min(-20, ...ys), hi = Math.max(25, ...ys);
+  const lo = Math.min(-5, ...ys), hi = Math.max(25, ...ys);
   const x = (ep) => l + (ep / total) * (W - l - r);
   const y = (v) => t + (1 - (v - lo) / (hi - lo)) * (H - t - b);
   for (const v of [lo, 0, hi]) {
@@ -197,7 +228,7 @@ function renderCurve(points, total) {
 let training = false;
 function initTraining() {
   renderCurve(results.curve, results.trainEpisodes);
-  renderPolicy(results.policy);
+  renderPolicies(results.policy.calm, results.policy.volatile);
   const share = $("#informed"), shareOut = $("#informed-out");
   const showShare = () => { shareOut.textContent = Math.round(share.value * 100) + "%"; };
   share.addEventListener("input", showShare);
@@ -210,15 +241,15 @@ function initTraining() {
     const params = { informedShare: +share.value };
     const agent = new QAgent();
     const seed = (Date.now() >>> 0) || 1;
-    const episodes = 10000;
-    const gen = train(agent, makeRng(seed), { params, episodes, report: 250 });
+    const episodes = results.trainEpisodes;
+    const gen = train(agent, makeRng(seed), { params, episodes, report: 500 });
     const points = [];
     const stepTraining = () => {
       const next = gen.next();
       if (!next.done) {
         points.push(next.value);
         renderCurve(points, episodes);
-        renderPolicy(agent.describe());
+        renderPolicies(agent.describe(false), agent.describe(true));
         status.textContent = `Training: episode ${next.value.episode.toLocaleString("en-GB")} of ${episodes.toLocaleString("en-GB")}. Still exploring ${Math.round(next.value.epsilon * 100)}% of the time.`;
         setTimeout(stepTraining, 0);
         return;
@@ -226,12 +257,13 @@ function initTraining() {
       const testSeed = seed + 1;
       const a = evaluate(agent.policy(), makeRng(testSeed), { episodes: 1000, params });
       const f = evaluate(fixed(2), makeRng(testSeed), { episodes: 1000, params });
-      const flat = agent.describe().find((d) => d.inventory === 0);
-      status.innerHTML = `<b>Done.</b> With ${Math.round(params.informedShare * 100)}% informed flow, the new agent quotes ${flat.bid} below and ${flat.ask} above when flat. ` +
-        `Over 1,000 fresh episodes it averaged ${fmt(a.mean)} ticks (standard deviation ${a.sd.toFixed(1)}), against ${fmt(f.mean)} (${f.sd.toFixed(1)}) for a fixed 2-tick quote. ` +
+      const calm = agent.describe(false).find((d) => d.inventory === 0), vol = agent.describe(true).find((d) => d.inventory === 0);
+      status.innerHTML = `<b>Done.</b> With ${Math.round(params.informedShare * 100)}% informed flow and no position, this agent quotes ${calm.bid} below and ${calm.ask} above when calm, and ${vol.bid} below and ${vol.ask} above when volatile. ` +
+        `Over 1,000 new episodes it averaged ${fmt(a.mean)} ticks (standard deviation ${a.sd.toFixed(1)}), against ${fmt(f.mean)} (${f.sd.toFixed(1)}) for a fixed 2-tick quote. ` +
         `The live market above now uses this agent.`;
       learned = agent;
       if (live.key === "learned") live.policy = learned.policy();
+      if (live.otherKey === "learned") live.otherPolicy = learned.policy();
       btn.disabled = false;
       btn.textContent = "Train another";
       training = false;
@@ -253,7 +285,7 @@ function initResults() {
   const host = $("#histograms");
   const { lo, hi, bins } = results.histogramRange;
   const peak = Math.max(...results.results.flatMap((r) => r.histogram));
-  for (const r of results.results) {
+  for (const r of results.results.filter((x) => x.key !== "fixed1")) {
     const fig = document.createElement("figure");
     fig.className = "hist" + (r.key === "learned" ? " hl" : "");
     const cap = document.createElement("figcaption");
