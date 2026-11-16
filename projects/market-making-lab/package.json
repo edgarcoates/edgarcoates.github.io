@@ -1,0 +1,11 @@
+{
+  "name": "market-making-lab",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A limit order book, a simulated market with informed and uninformed traders, and a Q-learning market maker.",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "experiment": "node experiments/run.mjs"
+  }
+}

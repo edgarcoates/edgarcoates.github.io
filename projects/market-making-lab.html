@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Market-Making Lab — Edgar Coates</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="A limit order book, a simulated market with informed and uninformed traders, and a market maker that learns how to quote. It all runs live in the browser.">
+<meta name="author" content="Edgar Coates">
+<link rel="canonical" href="https://edgarcoates.github.io/projects/market-making-lab.html">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Market-Making Lab — Edgar Coates">
+<meta property="og:description" content="A limit order book, a simulated market, and a market maker that learns how to quote. Runs live in the browser.">
+<meta property="og:url" content="https://edgarcoates.github.io/projects/market-making-lab.html">
+<meta property="og:image" content="https://edgarcoates.github.io/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#F6F8FB" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0B1017" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<script>try{var t=localStorage.getItem("theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,300..600;1,6..72,300..500&display=swap">
+<link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+<div class="progress" aria-hidden="true"></div>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="site-head">
+  <div class="wrap">
+    <a class="brand" href="../index.html">Edgar Coates</a>
+    <nav class="nav" id="nav" aria-label="On this page">
+      <a href="#market">Live market</a>
+      <a href="#problem">Problem</a>
+      <a href="#agent">Agent</a>
+      <a href="#results">Results</a>
+      <a href="#limits">Limits</a>
+    </nav>
+    <button class="icon-btn" id="theme-toggle" type="button" aria-label="Switch between light and dark theme">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.25" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 1.75a6.25 6.25 0 0 1 0 12.5z" fill="currentColor"/></svg>
+    </button>
+    <button class="icon-btn menu-btn" id="menu-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4.5h12M2 8h12M2 11.5h12" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="main">
+<section class="page-hero">
+  <div class="wrap">
+    <a class="crumb" href="../index.html#projects"><span aria-hidden="true">←</span> All projects</a>
+    <h1>Market-Making Lab</h1>
+    <p class="sub">A limit order book, a simulated market with informed and uninformed traders, and a market maker that learns how to quote. The market below is running in your browser, on the same code the tests check.</p>
+    <div class="mini-stats">
+      <div><b>1.13</b><span>profit per unit of risk, trained agent</span></div>
+      <div><b>0.34</b><span>the same measure, fixed 2-tick quote</span></div>
+      <div><b>5,000</b><span>test episodes per strategy</span></div>
+      <div><b>20</b><span>automated tests</span></div>
+    </div>
+    <div class="btn-row">
+      <a class="btn primary" href="#market">Watch it trade</a>
+      <a class="btn" href="https://github.com/edgarcoates/edgarcoates.github.io/tree/main/projects/market-making-lab" rel="noopener">Code on GitHub</a>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="market">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>Live market</h2>
+      <p>"You" are the market maker. Prices are in ticks.</p>
+    </div>
+    <div class="section-body">
+      <div class="lab" id="market-panel">
+        <div class="lab-bar">
+          <label class="field" for="strategy">Strategy
+            <select id="strategy">
+              <option value="learned">Trained agent</option>
+              <option value="skew">Hand-written skew rule</option>
+              <option value="fixed2">Fixed, 2 ticks each side</option>
+              <option value="fixed1">Fixed, 1 tick each side</option>
+            </select>
+          </label>
+          <label class="field" for="speed">Speed
+            <select id="speed">
+              <option value="900">Slow</option>
+              <option value="420" selected>Normal</option>
+              <option value="90">Fast</option>
+            </select>
+          </label>
+          <span class="lab-buttons">
+            <button class="btn primary" type="button" id="play" aria-pressed="false">Play</button>
+            <button class="btn" type="button" id="step">Step</button>
+            <button class="btn" type="button" id="restart">New episode</button>
+          </span>
+        </div>
+        <div class="lab-grid">
+          <div class="book">
+            <div class="lhead"><span>Bids</span><span>Price</span><span>Asks</span></div>
+            <div id="ladder" aria-label="Order book"></div>
+            <p class="note">Bars show resting size. Your one-lot quotes are in the accent colour. The marked row is the reference price P.</p>
+          </div>
+          <div class="side">
+            <dl class="readout">
+              <div><dt>Step</dt><dd class="num" id="s-step"></dd></div>
+              <div><dt>Your quote</dt><dd class="num" id="s-quote"></dd></div>
+              <div><dt>True value</dt><dd class="num" id="s-value"></dd></div>
+              <div><dt>Inventory</dt><dd class="num" id="s-inv"></dd></div>
+              <div><dt>Fills</dt><dd class="num" id="s-fills"></dd></div>
+              <div><dt>Profit</dt><dd class="num" id="s-pnl"></dd></div>
+            </dl>
+            <figure class="chart">
+              <figcaption class="label">Profit this episode, in ticks</figcaption>
+              <svg id="live-chart" viewBox="0 0 600 150" preserveAspectRatio="none" role="img" aria-label="Running profit for the current episode"></svg>
+            </figure>
+            <div>
+              <p class="label">Latest trades, with your edge against the new value</p>
+              <ul class="tape-list" id="tape" aria-live="off"></ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="problem">
+  <div class="wrap">
+    <div class="section-head"><h2>The problem</h2></div>
+    <div class="section-body">
+      <div class="prose">
+        <p class="lede">A market maker quotes a price to buy and a price to sell, and earns the gap when both trade. Two things take that gap away.</p>
+        <p><b>Adverse selection.</b> Some traders know more than the quote does. They trade only when the quote is wrong, so every fill from them is a loss.</p>
+        <p><b>Inventory risk.</b> Buys and sells don't arrive in pairs. The market maker ends up holding a position while the price moves.</p>
+        <p>Quote tight and you trade more, but you are picked off more and build inventory faster. Quote wide and you are safe but idle. The lab is a small market where that trade-off can be measured.</p>
+      </div>
+      <div class="choices">
+        <div><h3>The order book</h3><p>Price-time priority: the best price trades first, and at the same price the oldest order trades first. Orders can rest, cross, walk several levels, or be immediate-or-cancel.</p></div>
+        <div><h3>The true value</h3><p>A random walk the market maker cannot see until the next step. Everyone quotes around last step's value, rounded to a tick.</p></div>
+        <div><h3>Informed takers</h3><p>40% of arrivals know the new value. They trade only when a resting quote is on the wrong side of it.</p></div>
+        <div><h3>Uninformed takers</h3><p>The rest pick a side at random and pay up to a random distance from the reference price, so a tighter quote is hit more often.</p></div>
+        <div><h3>Competing dealers</h3><p>Always quoting three ticks away in size. Quote there and you sit behind them in the queue, which in practice means no fills.</p></div>
+        <div><h3>The market maker</h3><p>Posts one bid and one ask each step, each one, two or three ticks from the reference price. Nine possible quotes.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="agent">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>The agent</h2>
+      <p>Tabular Q-learning. It sees one thing: its own inventory.</p>
+    </div>
+    <div class="section-body">
+      <div class="prose">
+        <p>The agent starts knowing nothing and quoting at random. After each step it is rewarded with the edge on its fills against the new value, less a penalty that grows with the square of its inventory. Over 10,000 episodes of 200 steps it builds a table of how good each of the nine quotes is at each inventory level, and explores less as the table fills in.</p>
+      </div>
+      <div class="lab">
+        <div class="lab-bar">
+          <label class="field grow" for="informed">Share of takers who are informed <output id="informed-out" for="informed"></output>
+            <input type="range" id="informed" min="0" max="0.7" step="0.05" value="0.4">
+          </label>
+          <span class="lab-buttons"><button class="btn primary" type="button" id="train">Train a new agent</button></span>
+        </div>
+        <p class="flow-caption" id="train-status" aria-live="polite">Showing the agent trained for the results below. Train a new one here: it takes a few seconds, and you can change how much of the flow is informed first.</p>
+        <div class="lab-grid even">
+          <figure class="chart">
+            <figcaption class="label">Average profit per episode during training, in ticks</figcaption>
+            <svg id="curve" viewBox="0 0 600 190" role="img" aria-label="Learning curve: average profit per episode rises from negative to positive as training proceeds"></svg>
+          </figure>
+          <figure class="chart">
+            <figcaption class="label">Learned quote at each inventory level</figcaption>
+            <svg id="policy-chart" role="img" aria-label="For each inventory level from minus six to plus six, the bid and ask distance the agent chose"></svg>
+            <p class="note"><span class="key bid"></span>Bid <span class="key ask"></span>Ask. Columns are ticks from the reference price P; rows are inventory.</p>
+          </figure>
+        </div>
+      </div>
+      <div class="prose">
+        <p><b>What it learned.</b> When flat, quote two ticks each side. As soon as it is long by one unit, pull the ask in to one tick and push the bid out to three, so the next trade is more likely to be a sale. Mirror that when short. It gives up edge on the side that reduces the position and stops adding on the other.</p>
+        <p>That is the same idea as the standard inventory models of market making, where the quote is centred on a price shifted against the position. Nobody told the agent; it got there from the reward.</p>
+        <p>The outer rows of the chart (inventory beyond about three) are states the trained agent almost never reaches, so its choices there are not reliable.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="results">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>Results</h2>
+      <p>Every strategy faced the same 5,000 simulated episodes. Figures are ticks per 200-step episode. "Lost" is the share of episodes ending below zero.</p>
+    </div>
+    <div class="section-body">
+      <div class="table-wrap">
+        <table class="compact">
+          <thead><tr><th scope="col">Strategy</th><th scope="col" class="r">Mean profit</th><th scope="col" class="r">Std dev</th><th scope="col" class="r">Mean ÷ sd</th><th scope="col" class="r">5th pct</th><th scope="col" class="r">Lost</th><th scope="col" class="r">Avg |inv.|</th></tr></thead>
+          <tbody id="results-body"></tbody>
+        </table>
+      </div>
+      <div id="histograms" class="hists"></div>
+      <div class="prose">
+        <p><b>The tightest quote is the worst.</b> One tick each side gets the most fills and the lowest profit, because it is the quote informed traders can pick off most often.</p>
+        <p><b>The fixed 2-tick quote earns the most on average and is the riskiest way to earn it.</b> It never manages its position, so its result swings widely and it loses money in about three episodes in ten.</p>
+        <p><b>The trained agent gives up about 30% of that average profit and removes about 80% of the variation.</b> It loses money in one episode in eight, and its bad outcomes are far milder: a 5th-percentile result of −7.5 ticks against −99.8.</p>
+        <p><b>It did not beat a well-tuned rule.</b> My hand-written rule waits until inventory reaches two units before skewing. Moving that threshold to one unit reproduces the agent's results exactly. What the agent added was finding the threshold without being given it.</p>
+      </div>
+      <div class="funnel">
+        <p class="label">Trained agent's mean profit per episode as informed flow rises, in ticks</p>
+        <div id="sweep" class="bars"></div>
+        <p class="note">A separate agent was trained at each level and tested on 2,000 episodes. As more of the flow is informed, the spread the market maker can keep shrinks. At 60% the agent stopped quoting inside the dealers and made nothing.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="limits">
+  <div class="wrap">
+    <div class="section-head"><h2>Limits</h2></div>
+    <div class="section-body">
+      <div class="prose">
+        <p>This is a simulated market, not market data, and the results are in ticks, not money. They show how the trade-off behaves under the assumptions below. They say nothing about how any strategy would do in a real market.</p>
+      </div>
+      <dl class="deflist">
+        <div><dt>The market</dt><dd>One instrument, one-lot orders, a value that follows a simple random walk. The competing dealers never adapt.</dd></div>
+        <div><dt>The book</dt><dd>Quotes are replaced every step, so queue position does not carry over from one step to the next.</dd></div>
+        <div><dt>The agent</dt><dd>It sees only its own inventory: no order flow, volatility or time of day. A table works because there are 13 states and 9 actions; a richer state would need function approximation.</dd></div>
+        <div><dt>The measure</dt><dd>Mean divided by standard deviation of profit per episode. The inventory penalty that produces the agent's caution is a parameter I chose, and a different value gives a different trade-off.</dd></div>
+      </dl>
+      <ul class="tags" aria-label="Technologies">
+        <li>JavaScript</li><li>Limit order book</li><li>Market microstructure</li><li>Q-learning</li><li>Simulation</li><li>node:test</li>
+      </ul>
+      <div class="btn-row">
+        <a class="btn primary" href="https://github.com/edgarcoates/edgarcoates.github.io/tree/main/projects/market-making-lab" rel="noopener">Source code</a>
+        <a class="btn" href="https://github.com/edgarcoates/edgarcoates.github.io/blob/main/projects/market-making-lab/README.md" rel="noopener">README</a>
+        <a class="btn" href="agentic-job-matcher.html">Next project: Agentic Job Matcher</a>
+      </div>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer class="site-foot">
+  <div class="wrap"><span>© 2026 Edgar Coates</span><a href="../index.html">Back to the main page</a></div>
+</footer>
+
+<script src="../assets/js/main.js" defer></script>
+<script type="module" src="market-making-lab/app.js"></script>
+</body>
+</html>
