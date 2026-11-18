@@ -128,25 +128,25 @@
   <div class="wrap">
     <div class="section-head">
       <h2>What I bring</h2>
-      <p>Choose one to highlight the evidence for it across the page.</p>
+      <p>Use "Highlight the evidence" on any card to mark where it shows up in my experience below.</p>
     </div>
     <div class="section-body">
-      <div class="lenses" role="group" aria-label="Highlight evidence by strength">
-        <button class="lens" type="button" aria-pressed="false" data-set-lens="m" data-name="Market structure">
+      <div class="lenses">
+        <article class="lens" data-lens-card="m">
           <h3>Market structure</h3>
           <p>Built and presented a US Treasury revenue forecast to Tradeweb's Group Head of Investor Relations, modelling market volumes, electronification, dealer-to-client and dealer-to-dealer share, and fee capture.</p>
-          <span class="hint">Highlight the evidence</span>
-        </button>
-        <button class="lens" type="button" aria-pressed="false" data-set-lens="a" data-name="AI tooling">
+          <button class="lens-toggle" type="button" aria-pressed="false" data-set-lens="m" data-name="Market structure"><span class="dot" aria-hidden="true"></span><span class="off">Highlight the evidence</span><span class="on">Highlighted · clear</span></button>
+        </article>
+        <article class="lens" data-lens-card="a">
           <h3>AI tooling</h3>
           <p>Built LLM tools at Tradeweb for earnings-call themes, reconciliation files, cash-flow variance analysis and KYC filing, and presented the method to the CFO and CAO. Built a multi-agent system with LangGraph and the Claude API.</p>
-          <span class="hint">Highlight the evidence</span>
-        </button>
-        <button class="lens" type="button" aria-pressed="false" data-set-lens="i" data-name="Investing">
+          <button class="lens-toggle" type="button" aria-pressed="false" data-set-lens="a" data-name="AI tooling"><span class="dot" aria-hidden="true"></span><span class="off">Highlight the evidence</span><span class="on">Highlighted · clear</span></button>
+        </article>
+        <article class="lens" data-lens-card="i">
           <h3>Investing</h3>
           <p>Head of Portfolio Management at Minerva, leading a ten-analyst team on a €12.4m student-managed simulated portfolio (21.3% 12-month return, 2.32 Sharpe), and building its analyst training scheme.</p>
-          <span class="hint">Highlight the evidence</span>
-        </button>
+          <button class="lens-toggle" type="button" aria-pressed="false" data-set-lens="i" data-name="Investing"><span class="dot" aria-hidden="true"></span><span class="off">Highlight the evidence</span><span class="on">Highlighted · clear</span></button>
+        </article>
       </div>
     </div>
   </div>
@@ -156,7 +156,7 @@
   <div class="wrap">
     <div class="section-head">
       <h2>Experience</h2>
-      <p>Choose a city to see what I did there.</p>
+      <p>Choose a city on the map or below it. The roles from that city are marked in the timeline.</p>
     </div>
     <div class="section-body">
       <div class="map">
@@ -175,6 +175,7 @@
           <button class="pin l" type="button" aria-pressed="false" data-set-city="Milan" style="left:92.96%;top:56.16%"><i></i><span>Milan</span></button>
         </div>
         <div class="chips" role="group" aria-label="Filter by city">
+          <span class="label">Choose a city</span>
           <button class="chip" type="button" aria-pressed="false" data-set-city="London">London <small>2023, 2025</small></button>
           <button class="chip" type="button" aria-pressed="false" data-set-city="Milan">Milan <small>2024–27</small></button>
           <button class="chip" type="button" aria-pressed="false" data-set-city="New York">New York <small>2026</small></button>
@@ -266,16 +267,62 @@
         <div class="stat"><span class="v"><span data-count="2.32" data-dp="2">2.32</span></span><span class="k">Sharpe ratio, with risk controls and systematic hedging</span></div>
         <div class="stat"><span class="v">€<span data-count="12.4" data-dp="1">12.4</span><small>m</small></span><span class="k">Student-managed simulated portfolio, ten analysts</span></div>
       </div>
-      <div class="table-wrap" data-lens="i">
+      <div class="table-wrap theses" data-lens="i">
         <table>
-          <caption class="label">Theses I wrote and pitched, all implemented</caption>
-          <thead><tr><th scope="col">Company</th><th scope="col">Entered</th><th scope="col" class="r">Entry price</th></tr></thead>
+          <caption class="label">Theses I wrote and pitched, all implemented. Select a company for the thesis and how it played out.</caption>
+          <thead><tr><th scope="col">Company</th><th scope="col">Call</th><th scope="col" class="hide-sm">Entered</th><th scope="col" class="r">Entry</th><th scope="col" class="r">Since entry</th></tr></thead>
           <tbody>
-            <tr><th scope="row">ASML</th><td class="num">24 Oct 2025</td><td class="num r">€883.70</td></tr>
-            <tr><th scope="row">Coca-Cola HBC</th><td class="num">24 Nov 2025</td><td class="num r">£36.90</td></tr>
-            <tr><th scope="row">Gerdau</th><td class="num">24 Nov 2025</td><td class="num r">$3.45</td></tr>
+            <tr class="thesis-row" data-thesis="asml">
+              <th scope="row"><button class="row-toggle" type="button" aria-expanded="false" aria-controls="th-asml"><span class="chev" aria-hidden="true"></span>ASML</button></th>
+              <td><span class="call call-hold">Hold</span></td>
+              <td class="num hide-sm">24 Oct 2025</td>
+              <td class="num r">€883.70</td>
+              <td class="num r pos">+40.0%</td>
+            </tr>
+            <tr class="thesis-detail" id="th-asml" hidden>
+              <td colspan="5">
+                <div class="thesis">
+                  <div class="th-block"><p class="label">Company</p><p>Dutch maker of photolithography systems for chipmaking, and the only supplier of extreme-ultraviolet (EUV) lithography. Expanding into advanced packaging with the XT:260.</p></div>
+                  <div class="th-block wide"><p class="label">Thesis: what the market was missing</p><p>My review after the Q3 2025 results argued the market was <em>not</em> mispricing ASML. The EUV monopoly and strong orders (net bookings +105% year on year) were already in the price, while EPS growth trailed the sector (3.0% against 25.8%) and EV/EBITDA sat at a small premium (27.7x against 26.4x). Hold the position; watch China exposure, conversion of bookings to revenue after ASML stopped reporting them, and repeat orders for the XT:260.</p></div>
+                  <div class="th-block"><p class="label">Outcome</p><p class="th-move num">€883.70 <span aria-hidden="true">→</span><span class="sr-only">to</span> €1,236.80</p><p>Up 40.0% since entry, and it traded as high as €1,741 in June 2026. Holding rather than trimming kept the gain. My view that the upside was already priced in proved too cautious.</p><p><span class="verdict mixed">Partly right</span></p></div>
+                </div>
+              </td>
+            </tr>
+            <tr class="thesis-row" data-thesis="cch">
+              <th scope="row"><button class="row-toggle" type="button" aria-expanded="false" aria-controls="th-cch"><span class="chev" aria-hidden="true"></span>Coca-Cola HBC</button></th>
+              <td><span class="call call-buy">Buy</span></td>
+              <td class="num hide-sm">24 Nov 2025</td>
+              <td class="num r">£36.90</td>
+              <td class="num r pos">+16.4%</td>
+            </tr>
+            <tr class="thesis-detail" id="th-cch" hidden>
+              <td colspan="5">
+                <div class="thesis">
+                  <div class="th-block"><p class="label">Company</p><p>Bottler of Coca-Cola beverages across Europe, Nigeria, Egypt and other emerging markets. Listed in London, headquartered in Switzerland.</p></div>
+                  <div class="th-block wide"><p class="label">Thesis: what the market was missing</p><p>The market valued it as a mature European bottler and under-weighted two things: emerging-market growth (revenue per case +18.9%) and the agreed purchase of a 75% stake in Coca-Cola Beverages Africa, which extends its reach to over half of Africa's population and 67% of Coca-Cola's volume on the continent. Supporting evidence: H1 2025 comparable EPS +25.8%, gross margin up 60 bp to 36.7%, free cash flow +10.1%. Main risks: integrating the African business, and currency translation from emerging markets.</p></div>
+                  <div class="th-block"><p class="label">Outcome</p><p class="th-move num">£36.90 <span aria-hidden="true">→</span><span class="sr-only">to</span> £42.94</p><p>Up 16.4% since entry, plus a €1.20 dividend in May 2026. It traded as high as £51.96 in July 2026 (+41%) before giving back part of the gain.</p><p><span class="verdict good">Right so far</span></p></div>
+                </div>
+              </td>
+            </tr>
+            <tr class="thesis-row" data-thesis="ggb">
+              <th scope="row"><button class="row-toggle" type="button" aria-expanded="false" aria-controls="th-ggb"><span class="chev" aria-hidden="true"></span>Gerdau</button></th>
+              <td><span class="call call-buy">Buy</span></td>
+              <td class="num hide-sm">24 Nov 2025</td>
+              <td class="num r">$3.45</td>
+              <td class="num r pos">+23.8%</td>
+            </tr>
+            <tr class="thesis-detail" id="th-ggb" hidden>
+              <td colspan="5">
+                <div class="thesis">
+                  <div class="th-block"><p class="label">Company</p><p>Largest producer of long steel in the Americas. Brazilian, with shares listed in New York; about 49% of EBITDA came from North America in 3Q25.</p></div>
+                  <div class="th-block wide"><p class="label">Thesis: what the market was missing</p><p>Priced like a cyclical Brazilian steelmaker at about 10x earnings, despite returns on capital above peers, the strongest balance sheet in its peer group (net debt 0.81x EBITDA, R$9.9bn of cash) and direct benefit from US tariffs that restrict steel imports. Supporting evidence from 3Q25: adjusted EBITDA +6.6% on the quarter at a 15.2% margin, free cash flow turning positive, 2026 capital spending guided 22% lower, a R$555m dividend and a buyback 88% complete.</p></div>
+                  <div class="th-block"><p class="label">Outcome</p><p class="th-move num">$3.45 <span aria-hidden="true">→</span><span class="sr-only">to</span> $4.27</p><p>Up 23.8% since entry, plus about $0.16 per share in dividends. It traded as high as $5.48 in October 2026 (+59%).</p><p><span class="verdict good">Right so far</span></p></div>
+                </div>
+              </td>
+            </tr>
           </tbody>
         </table>
+        <p class="table-note">Share-price change in local currency to 17 November 2026, excluding dividends.</p>
       </div>
       <div class="prose" data-lens="i">
         <p>The three positions returned 36% on average for the Multi-Asset fund's equity sleeve, which returned 14.3% at a 1.1 Sharpe over 12 months. I also built the analyst training scheme: cross-asset pitch guides, macro debates and masterclasses.</p>
@@ -364,7 +411,7 @@
             <li>Further Mathematics <b>A</b></li>
             <li>Physics <b>A</b></li>
           </ul>
-          <p>GCSEs: eleven grade 9s. Academic and sport scholarships, the Economics Prize, and three UKMT Gold-or-better awards.</p>
+          <p>GCSEs: eleven grade 9s. Academic and sport scholarships, the Economics Prize, and three <span class="term-wrap"><button class="term" type="button" aria-expanded="false" aria-controls="pop-ukmt">UKMT</button><span class="pop" id="pop-ukmt" role="note" hidden><b>United Kingdom Mathematics Trust.</b> Its Senior Mathematical Challenge is a national competition for sixth-form students. Gold goes to roughly the top 10% of entrants, and the highest scorers are invited to the Senior Kangaroo, a harder follow-on round.</span></span> Senior Mathematical Challenge gold awards, with qualification for the Senior Kangaroo round.</p>
         </article>
       </div>
     </div>
@@ -436,6 +483,7 @@
 
 <div class="filter-bar" id="filter-bar" role="status">
   <span id="filter-text"></span>
+  <button type="button" id="filter-show">Show</button>
   <button type="button" id="filter-clear">Clear</button>
 </div>
 

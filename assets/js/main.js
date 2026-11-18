@@ -66,7 +66,9 @@
     });
   }
 
-  /* Evidence filter: one of the three strengths, or a city. */
+  /* Evidence filter: one of the three strengths, or a city.
+     Matching items are marked (.hit) and the rest are faded (.dim). Nothing scrolls on its own;
+     the floating bar and the map caption offer a "Show" jump instead. */
   var bar = $("#filter-bar"), barText = $("#filter-text");
   var state = { kind: null, value: null };
   var cityNotes = {
@@ -77,37 +79,57 @@
     "South Bend": "<b>South Bend.</b> Exchange semester at Notre Dame's Mendoza College of Business, autumn 2026.",
     "Boston": "<b>Boston.</b> Student International Business Council travel team: an LBO model and pitch deck on a live investment for Audax Private Equity."
   };
+  var plural = function (n, one, many) { return n + " " + (n === 1 ? one : many); };
+  function showHits() {
+    var hits = $$(".hit");
+    if (hits.length) hits[0].scrollIntoView({ block: "center" });
+  }
   function applyFilter(kind, value, name) {
     if (state.kind === kind && state.value === value) { kind = null; value = null; }
     state = { kind: kind, value: value };
     $$("[data-set-lens]").forEach(function (b) {
-      b.setAttribute("aria-pressed", String(kind === "lens" && b.getAttribute("data-set-lens") === value));
+      var on = kind === "lens" && b.getAttribute("data-set-lens") === value;
+      b.setAttribute("aria-pressed", String(on));
+      var card = b.closest(".lens");
+      if (card) card.classList.toggle("on", on);
     });
     $$("[data-set-city]").forEach(function (b) {
-      var on = kind === "city" && b.getAttribute("data-set-city") === value;
-      b.setAttribute("aria-pressed", String(on));
+      b.setAttribute("aria-pressed", String(kind === "city" && b.getAttribute("data-set-city") === value));
     });
+    var lensHits = 0, roleHits = 0;
     $$("[data-lens]").forEach(function (el) {
-      var dim = false;
-      if (kind === "lens") dim = el.getAttribute("data-lens").split(" ").indexOf(value) === -1;
+      var hit = false, dim = false;
+      if (kind === "lens") { hit = el.getAttribute("data-lens").split(" ").indexOf(value) !== -1; dim = !hit; if (hit) lensHits++; }
       if (kind === "city") { var host = el.closest("[data-city]"); dim = !host || host.getAttribute("data-city").indexOf(value) === -1; }
       el.classList.toggle("dim", dim);
+      el.classList.toggle("hit", hit);
     });
     $$(".role").forEach(function (el) {
-      el.classList.toggle("dim", kind === "city" && el.getAttribute("data-city").indexOf(value) === -1);
+      var hit = kind === "city" && el.getAttribute("data-city").indexOf(value) !== -1;
+      if (hit) roleHits++;
+      el.classList.toggle("hit", hit);
+      el.classList.toggle("dim", kind === "city" && !hit);
     });
     if (bar) {
       bar.classList.toggle("show", !!kind);
-      if (kind) barText.textContent = (kind === "lens" ? "Highlighting: " : "Showing: ") + name;
+      if (kind === "lens") barText.textContent = name + ": " + plural(lensHits, "item", "items") + " marked";
+      if (kind === "city") barText.textContent = name + ": " + plural(roleHits, "role", "roles") + " marked";
     }
     var detail = $("#map-detail");
-    if (detail) detail.innerHTML = kind === "city" ? cityNotes[value] : cityNotes.all;
+    if (detail) {
+      detail.innerHTML = kind === "city" ? cityNotes[value] : cityNotes.all;
+      if (kind === "city" && roleHits) {
+        var jump = document.createElement("button");
+        jump.type = "button";
+        jump.className = "jump";
+        jump.textContent = "See " + (roleHits === 1 ? "the role" : "the " + roleHits + " roles") + " in the timeline ↓";
+        jump.addEventListener("click", showHits);
+        detail.appendChild(document.createTextNode(" "));
+        detail.appendChild(jump);
+      }
+    }
     var stage = $(".map-stage");
     if (stage) stage.classList.toggle("has-pick", kind === "city");
-    if (kind === "lens") {
-      var first = $("#experience");
-      if (first) first.scrollIntoView({ block: "start" });
-    }
   }
   $$("[data-set-lens]").forEach(function (b) {
     b.addEventListener("click", function () { applyFilter("lens", b.getAttribute("data-set-lens"), b.getAttribute("data-name")); });
@@ -117,6 +139,62 @@
   });
   var clear = $("#filter-clear");
   if (clear) clear.addEventListener("click", function () { applyFilter(null, null); });
+  var show = $("#filter-show");
+  if (show) show.addEventListener("click", showHits);
+
+  /* Equity theses: each row opens a short write-up beneath it. */
+  $$(".thesis-row").forEach(function (row) {
+    var btn = $(".row-toggle", row), panel = document.getElementById(btn.getAttribute("aria-controls"));
+    var toggle = function () {
+      var open = btn.getAttribute("aria-expanded") !== "true";
+      btn.setAttribute("aria-expanded", String(open));
+      row.classList.toggle("open", open);
+      panel.hidden = !open;
+    };
+    btn.addEventListener("click", function (e) { e.stopPropagation(); toggle(); });
+    row.addEventListener("click", toggle);
+  });
+
+  /* Term explainers (e.g. UKMT): hover with a mouse, or tap. Esc or a tap elsewhere closes. */
+  var terms = $$(".term");
+  var closeTerms = function (except) {
+    terms.forEach(function (t) {
+      if (t === except) return;
+      t.setAttribute("aria-expanded", "false");
+      t.pinned = false;
+      document.getElementById(t.getAttribute("aria-controls")).hidden = true;
+    });
+  };
+  var place = function (pop) {
+    pop.style.left = "0px";
+    var edge = document.documentElement.clientWidth - 16, r = pop.getBoundingClientRect();
+    if (r.right > edge) pop.style.left = (edge - r.right) + "px";
+    r = pop.getBoundingClientRect();
+    if (r.left < 16) pop.style.left = (parseFloat(pop.style.left) + 16 - r.left) + "px";
+  };
+  var openTerm = function (t) {
+    closeTerms(t);
+    var pop = document.getElementById(t.getAttribute("aria-controls"));
+    t.setAttribute("aria-expanded", "true");
+    pop.hidden = false;
+    place(pop);
+  };
+  var finePointer = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+  terms.forEach(function (t) {
+    var wrap = t.closest(".term-wrap");
+    t.addEventListener("click", function (e) {
+      e.stopPropagation();
+      if (t.pinned) { closeTerms(); return; }
+      openTerm(t);
+      t.pinned = true;
+    });
+    if (finePointer) {
+      wrap.addEventListener("mouseenter", function () { if (t.getAttribute("aria-expanded") !== "true") openTerm(t); });
+      wrap.addEventListener("mouseleave", function () { if (!t.pinned) closeTerms(); });
+    }
+  });
+  document.addEventListener("click", function (e) { if (!e.target.closest(".term-wrap")) closeTerms(); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeTerms(); });
 
   /* Count figures up when they scroll into view. The HTML already holds the final values. */
   var counters = $$("[data-count]");
