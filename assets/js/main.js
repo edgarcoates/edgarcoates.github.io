@@ -67,8 +67,8 @@
   }
 
   /* Evidence filter: one of the three strengths, or a city.
-     Matching items are marked (.hit) and the rest are faded (.dim). Nothing scrolls on its own;
-     the floating bar and the map caption offer a "Show" jump instead. */
+     A strength fades everything that is not evidence for it and jumps to Experience.
+     A city also marks its roles (.hit), and the map caption and floating bar offer a jump to them. */
   var bar = $("#filter-bar"), barText = $("#filter-text");
   var state = { kind: null, value: null };
   var cityNotes = {
@@ -88,21 +88,17 @@
     if (state.kind === kind && state.value === value) { kind = null; value = null; }
     state = { kind: kind, value: value };
     $$("[data-set-lens]").forEach(function (b) {
-      var on = kind === "lens" && b.getAttribute("data-set-lens") === value;
-      b.setAttribute("aria-pressed", String(on));
-      var card = b.closest(".lens");
-      if (card) card.classList.toggle("on", on);
+      b.setAttribute("aria-pressed", String(kind === "lens" && b.getAttribute("data-set-lens") === value));
     });
     $$("[data-set-city]").forEach(function (b) {
       b.setAttribute("aria-pressed", String(kind === "city" && b.getAttribute("data-set-city") === value));
     });
-    var lensHits = 0, roleHits = 0;
+    var roleHits = 0;
     $$("[data-lens]").forEach(function (el) {
-      var hit = false, dim = false;
-      if (kind === "lens") { hit = el.getAttribute("data-lens").split(" ").indexOf(value) !== -1; dim = !hit; if (hit) lensHits++; }
+      var dim = false;
+      if (kind === "lens") dim = el.getAttribute("data-lens").split(" ").indexOf(value) === -1;
       if (kind === "city") { var host = el.closest("[data-city]"); dim = !host || host.getAttribute("data-city").indexOf(value) === -1; }
       el.classList.toggle("dim", dim);
-      el.classList.toggle("hit", hit);
     });
     $$(".role").forEach(function (el) {
       var hit = kind === "city" && el.getAttribute("data-city").indexOf(value) !== -1;
@@ -112,7 +108,7 @@
     });
     if (bar) {
       bar.classList.toggle("show", !!kind);
-      if (kind === "lens") barText.textContent = name + ": " + plural(lensHits, "item", "items") + " marked";
+      if (kind === "lens") barText.textContent = "Highlighting: " + name;
       if (kind === "city") barText.textContent = name + ": " + plural(roleHits, "role", "roles") + " marked";
     }
     var detail = $("#map-detail");
@@ -130,6 +126,12 @@
     }
     var stage = $(".map-stage");
     if (stage) stage.classList.toggle("has-pick", kind === "city");
+    var showBtn = $("#filter-show");
+    if (showBtn) showBtn.hidden = kind !== "city";
+    if (kind === "lens") {
+      var first = $("#experience");
+      if (first) first.scrollIntoView({ block: "start" });
+    }
   }
   $$("[data-set-lens]").forEach(function (b) {
     b.addEventListener("click", function () { applyFilter("lens", b.getAttribute("data-set-lens"), b.getAttribute("data-name")); });

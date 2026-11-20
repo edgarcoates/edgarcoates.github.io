@@ -598,34 +598,9 @@ table.compact thead th { font-size: 0.66rem; }
 /* ---- Preview: November feedback ---- */
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-/* Strength cards are no longer one big button: only the small toggle acts. */
-.lens { cursor: default; }
-.lens:hover { background: transparent; }
-.lens::after { display: none; }
-.lens.on { background: var(--accent-wash); }
-.lens.on::before { transform: scaleX(1); }
-.lens-toggle {
-  justify-self: start; display: inline-flex; align-items: center; gap: 0.5rem; margin-top: 0.4rem;
-  font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase;
-  color: var(--accent); background: var(--surface); border: 1px solid var(--accent); border-radius: 999px;
-  padding: 0.45rem 0.8rem; cursor: pointer; transition: background 0.15s, color 0.15s;
-}
-.lens-toggle:hover { background: var(--accent-wash); }
-.lens-toggle .dot { width: 0.55rem; height: 0.55rem; border-radius: 50%; border: 1.5px solid currentColor; }
-.lens-toggle .on { display: none; }
-.lens-toggle[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
-.lens-toggle[aria-pressed="true"] .dot { background: currentColor; }
-.lens-toggle[aria-pressed="true"] .on { display: inline; }
-.lens-toggle[aria-pressed="true"] .off { display: none; }
-
-/* What a filter marks: an accent rule and wash, not just fading the rest. */
-.role li.hit { color: var(--ink); }
-.role li.hit::before { width: 0.7rem; height: 2px; background: var(--accent); }
-.role li.hit { background: linear-gradient(90deg, var(--accent-wash), transparent 85%); border-radius: 2px; }
+/* City filter: the matching roles get an accent rule and wash, not just fading the rest. */
 .role.hit { box-shadow: inset 3px 0 0 var(--accent); padding-left: 1rem; background: linear-gradient(90deg, var(--accent-wash), transparent 70%); transition: padding 0.2s, background 0.2s; }
 .role.hit:first-child { padding-top: 1.5rem; }
-.hit:not(li):not(.role) { outline: 2px solid var(--accent); outline-offset: 4px; }
-.dim { opacity: 0.32; }
 .filter-bar button + button { margin-left: -0.35rem; }
 #filter-show { background: transparent; color: var(--paper); border: 1px solid color-mix(in srgb, var(--paper) 45%, transparent); }
 .map-detail .jump {
